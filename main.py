@@ -49,68 +49,43 @@ class Simulation:
                     self.grid[r][c] = 1
 
     def update_world(self):
-        new_grid = self.grid.copy()
-        # Повышаем шанс рождения, чтобы компенсировать аппетит жертв
-        death_rate = 0.04 
-        birth_chance = 0.08  # Увеличил с 0.06 до 0.08 для стабильности
-        
-        #дрейф планктона
-        for p in self.plankton_list:
+        # 1. Фон
+        self.grid.fill(0) 
+
+        # 2. Дрейф и отрисовка планктона
+        for p in self.plankton_list[:]:
             p.drift(self.width, self.height)
+            # Рисуем планктон 
+            self.grid[int(p.y) % self.height][int(p.x) % self.width] = 1
 
-        #логика жертв
-        for p in self.prey_list:
+        # 3. Логика жертв
+        for p in self.prey_list[:]:
             p.move(self.width, self.height)
-
-            #поиск еды через расстояние
+            
+            # Поиск еды среди объектов планктона
             for food in self.plankton_list[:]:
                 distance = ((p.x - food.x)**2 + (p.y - food.y)**2)**0.5
-                if distance < 2.0:
+                if distance < 1.5: # Радиус поедания
                     self.plankton_list.remove(food)
-                    p.energy += 12 # бонус к энергии
+                    p.energy += 12 * p.genes["efficiency"] # Используем ГЕН! [cite: 2026-02-05]
 
-                    #регенерация планктона
-                    if random.random() < birth_chance:
-                        self.plankton_list.append(Plankton(random.random() * self.width,
-                                                  random.random() * self.height))
+            # Размножение 
+            child = p.reproduce()
+            if child:
+                self.prey_list.append(child)
+
+            # Смерть от голода
             if p.energy <= 0:
                 self.prey_list.remove(p)
+            else:
+                # Рисуем жертву (код 2 в твоем cmap)
+                self.grid[int(p.y) % self.height][int(p.x) % self.width] = 2
 
-        
-
-        
-
-            
-                
-                if self.grid[r][c] == 1:
-                    # МЯГКАЯ ЛОГИКА:
-                    # Убираем neighbors < 1 (пусть одиночки живут)
-                    # Порог перенаселения ставим > 4 (вместо 3), чтобы кучки были погуще
-                    if random.random() < death_rate or neighbors > 4:
-                        new_grid[r][c] = 0
-                elif self.grid[r][c] == 0:
-                    # Рождение: если есть хотя бы 1 сосед (быстрее заполняет пустоты)
-                    if neighbors > 0 and random.random() < birth_chance:
-                        new_grid[r][c] = 1
-                    # Чуть увеличили самозарождение (было 0.0001)
-                    elif random.random() < 0.0005:
-                        new_grid[r][c] = 1
-
-        self.grid = new_grid
-
-        if hasattr(self, "prey_list"):
-            for p in self.prey_list[:]: 
-                p.move(self.width, self.height)
-                
-                if p.energy <= 0:
-                    self.prey_list.remove(p)
-                    continue
-
-                if self.grid[int(p.y)][int(p.x)] == 1:
-                    self.grid[int(p.y)][int(p.x)] = 0
-                    p.energy += 12 
-
-                self.grid[int(p.y)][int(p.x)] = 2
+        # 4. Регенерация планктона (чтобы не вымерли совсем)
+        if len(self.plankton_list) < 100:
+            if random.random() < 0.2:
+                self.plankton_list.append(Plankton(random.random() * self.width, 
+                                                  random.random() * self.height))
 
     def run(self):
         plt.ion()
