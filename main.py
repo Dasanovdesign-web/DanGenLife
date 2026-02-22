@@ -4,6 +4,7 @@ import config
 import random
 from entities import Prey
 from entities import Plankton
+from entities import Predator
 
 
 class Simulation:
@@ -22,6 +23,8 @@ class Simulation:
         self.prey_list = [Prey(random.randint(0, self.width-1), 
                                random.randint(0, self.height-1)) 
                           for _ in range(15)]
+        
+        self.predator_list = [Predator(random.random() * self.width, random.random() * self.height) for _ in range(5)]
         
         self.seed_plankton()
 
@@ -90,21 +93,44 @@ class Simulation:
     def run(self):
         plt.ion()
         fig, ax = plt.subplots(figsize=(8, 8))
-        from matplotlib.colors import ListedColormap
-        cmap = ListedColormap(["#1F1F1F", "#FEFAFA", "#00AD20", "#C70104"])
-        img = ax.imshow(self.grid, cmap=cmap, vmin=0, vmax=3)
-        ax.set_title("DanGenLife Ecosystem: Plankton & Prey")
+        
+        # Оставляем imshow только для фона (черный океан)
+        ax.set_facecolor("#1F1F1F") 
+        ax.set_xlim(0, self.width)
+        ax.set_ylim(0, self.height)
+        
+        # Создаем "слои" для каждого вида 
+        # s - размер, c - цвет
+        plankton_layer = ax.scatter([], [], c="#FEFAFA", s=2, alpha=0.5) # Крошечный планктон
+        prey_layer = ax.scatter([], [], c="#00AD20", s=40, edgecolors='white') # Зеленые жертвы
+        predator_layer = ax.scatter([], [], c="#C70104", s=100, edgecolors='white') # Большие красные хищники
+
+        ax.set_title("DanGenLife Ecosystem: Food Chain")
 
         try:
             while True:
-                self.update_world()    # Рассчитываем физику мира 
+                self.update_world()    # Рассчитываем физику 
                 self.log_statistics()  # Собираем данные в буфер 
                 
-                img.set_data(self.grid) 
-                plt.pause(3)           # Пауза для HDD 
+                # Обновляем координаты планктона 
+                if self.plankton_list:
+                    plankton_layer.set_offsets([[p.x, p.y] for p in self.plankton_list])
+                
+                # Обновляем координаты жертв
+                if self.prey_list:
+                    prey_layer.set_offsets([[p.x, p.y] for p in self.prey_list])
+                else:
+                    prey_layer.set_offsets(np.empty((0, 2)))
+
+                # Обновляем координаты хищников
+                if self.predator_list:
+                    predator_layer.set_offsets([[p.x, p.y] for p in self.predator_list])
+                else:
+                    predator_layer.set_offsets(np.empty((0, 2)))
+
+                plt.pause(0.01) # Теперь можно быстрее, scatter работает шустро!
         except KeyboardInterrupt:
             print("\nСимуляция остановлена")
-
 if __name__ == "__main__":
     sim = Simulation()
     sim.run()
