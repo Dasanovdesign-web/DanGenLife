@@ -2,17 +2,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import config
 import random
+import psutil
+import time
+import os
 from entities import Plankton, Prey, Predator  
+
+# Глобальный таймер для замера общей производительности
+start_sim_time = time.time()
 
 class Simulation:
     def __init__(self):
-        # 1. Сначала задаем размеры (исправляет AttributeError)
+        # 1. Параметры мира [cite: 2026-02-05]
         self.width = config.GRID_WIDTH
         self.height = config.GRID_HEIGHT
         self.grid = np.zeros((self.height, self.width))
         self.log_buffer = []  
+        self.iteration = 0
+        
+        # 2. Очистка логов (чтобы файл не раздувался) [cite: 2026-02-24]
+        if os.path.exists("simulation_log.txt"):
+            with open("simulation_log.txt", "w") as f:
+                f.write("--- New simulation start ---\n")
 
-        # 2. Создаем списки существ
+        # 3. Создание популяций [cite: 2026-01-30]
         self.plankton_list = [Plankton(random.random() * self.width,
                                        random.random() * self.height) for _ in range(150)]
         self.prey_list = [Prey(random.random() * self.width, 
@@ -23,20 +35,29 @@ class Simulation:
         self.seed_plankton()
 
     def log_statistics(self):
-        # Считаем по длине списков объектов (так точнее)
-        plankton_count = len(self.plankton_list)
-        prey_count = len(self.prey_list)
-        predator_count = len(self.predator_list)
+        self.iteration += 1
         
-        stats_str = f"Plankton: {plankton_count}, Prey: {prey_count}, Pred: {predator_count}"
-        self.log_buffer.append(stats_str)
+        # Замер ресурсов раз в 50 шагов [cite: 2026-02-19]
+        if self.iteration % 50 == 0:
+            process = psutil.Process(os.getpid())
+            mem_mb = process.memory_info().rss / (1024 * 1024)
+            # Считаем среднюю скорость шага от начала симуляции
+            avg_speed_ms = ((time.time() - start_sim_time) / self.iteration) * 1000
+            print(f"Шаг {self.iteration} | RAM: {mem_mb:.2f} MB | Speed: {avg_speed_ms:.2f} ms/step")
+
+        # Формируем строку лога [cite: 2026-02-05]
+        stats_str = f"It: {self.iteration} | Pl: {len(self.plankton_list)}, Pr: {len(self.prey_list)}, Pred: {len(self.predator_list)}"
         
+        # Оптимизированная запись (раз в 10 шагов в буфер) [cite: 2026-02-24]
+        if self.iteration % 10 == 0:
+            self.log_buffer.append(stats_str)
+
+        # Сброс буфера на диск
         if len(self.log_buffer) >= 50:
             with open("simulation_log.txt", "a") as f:
-                for line in self.log_buffer:
-                    f.write(line + "\n")
+                f.writelines(line + "\n" for line in self.log_buffer)
             self.log_buffer = [] 
-            print("--- Статистика сброшена на диск ---")
+            print("--- Логи сохранены ---")
 
     def seed_plankton(self):
         for r in range(self.height):
@@ -47,44 +68,36 @@ class Simulation:
     def update_world(self):
         self.grid.fill(0) 
 
-        # 1. Планктон
+        # 1. Планктон [cite: 2026-01-30]
         for p in self.plankton_list[:]:
             p.drift(self.width, self.height)
 
-        # 2. Жертвы
+        # 2. Жертвы (охота на планктон)
         for p in self.prey_list[:]:
-            p.move(self.width, self.height, self.plankton_list) # Передаем список еды
-            
+            p.move(self.width, self.height, self.plankton_list)
             for food in self.plankton_list[:]:
-                distance = ((p.x - food.x)**2 + (p.y - food.y)**2)**0.5
-                if distance < 1.5:
+                if abs(p.x - food.x) < 1.5 and abs(p.y - food.y) < 1.5:
                     self.plankton_list.remove(food)
-                    p.energy += 30 # Увеличили бонус для выживания
-
+                    p.energy += 30 
+            
             child = p.reproduce()
             if child: self.prey_list.append(child)
+            if p.energy <= 0: self.prey_list.remove(p)
 
-            if p.energy <= 0:
-                self.prey_list.remove(p)
-
-        # 3. НОВАЯ ЛОГИКА: Хищники (исправляет отсутствие движения)
+        # 3. Хищники (охота на жертв) [cite: 2026-01-30]
         for pred in self.predator_list[:]:
-            pred.move(self.width, self.height, self.prey_list) # Охота на жертв
-            
+            pred.move(self.width, self.height, self.prey_list)
             for prey in self.prey_list[:]:
-                dist = ((pred.x - prey.x)**2 + (pred.y - prey.y)**2)**0.5
-                if dist < 2.0:
-                    self.prey_list.remove(prey)
-                    pred.energy += 40 # Хороший бонус за охоту
-            
-            if pred.energy <= 0:
-                self.predator_list.remove(pred)
+                if abs(pred.x - prey.x) < 2.0 and abs(pred.y - prey.y) < 2.0:
+                    if prey in self.prey_list:
+                        self.prey_list.remove(prey)
+                        pred.energy += 40
+            if pred.energy <= 0: self.predator_list.remove(pred)
 
         # Регенерация планктона
-        if len(self.plankton_list) < 120:
-            if random.random() < 0.3:
-                self.plankton_list.append(Plankton(random.random() * self.width, 
-                                                  random.random() * self.height))
+        if len(self.plankton_list) < 120 and random.random() < 0.3:
+            self.plankton_list.append(Plankton(random.random() * self.width, 
+                                               random.random() * self.height))
 
     def run(self):
         plt.ion()
@@ -93,42 +106,35 @@ class Simulation:
         ax.set_xlim(0, self.width)
         ax.set_ylim(0, self.height)
         
-        plankton_layer = ax.scatter([], [], c="#FEFAFA", s=2, alpha=0.5)
-        prey_layer = ax.scatter([], [], c="#00AD20", s=40, edgecolors='white')
-        predator_layer = ax.scatter([], [], c="#C70104", s=100, edgecolors='white')
+        pl_layer = ax.scatter([], [], c="#FEFAFA", s=2, alpha=0.5)
+        pr_layer = ax.scatter([], [], c="#00AD20", s=40, edgecolors='white')
+        pd_layer = ax.scatter([], [], c="#C70104", s=100, edgecolors='white')
 
-        ax.set_title("DanGenLife Ecosystem: Predator-Prey Balance")
+        # HUD (текст на экране) [cite: 2026-01-26]
+        info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', fontsize=10)
+        ax.set_title("DanGenLife Ecosystem: Balance")
 
         try:
-            # Исправляет бесконечный цикл: проверяем, существует ли окно
             while plt.fignum_exists(fig.number):
                 self.update_world()
                 self.log_statistics()
                 
-                if self.plankton_list:
-                    plankton_layer.set_offsets([[p.x, p.y] for p in self.plankton_list])
+                # Обновление графики
+                pl_layer.set_offsets([[p.x, p.y] for p in self.plankton_list])
+                pr_layer.set_offsets([[p.x, p.y] for p in self.prey_list] if self.prey_list else np.empty((0, 2)))
+                pd_layer.set_offsets([[p.x, p.y] for p in self.predator_list] if self.predator_list else np.empty((0, 2)))
                 
-                if self.prey_list:
-                    prey_layer.set_offsets([[p.x, p.y] for p in self.prey_list])
-                else:
-                    prey_layer.set_offsets(np.empty((0, 2)))
+                # Обновление HUD
+                info_text.set_text(f"Step: {self.iteration} | Prey: {len(self.prey_list)} | Pred: {len(self.predator_list)}")
 
-                if self.predator_list:
-                    predator_layer.set_offsets([[p.x, p.y] for p in self.predator_list])
-                else:
-                    predator_layer.set_offsets(np.empty((0, 2)))
-
-                plt.pause(0.01)
+                plt.pause(0.02) # Ускорили отрисовку [cite: 2026-02-05]
         except KeyboardInterrupt:
-            print("\nСимуляция остановлена")
+            print("\nОстановлено")
         finally:
-            # Финальный сброс данных при закрытии
             if self.log_buffer:
                 with open("simulation_log.txt", "a") as f:
-                    for line in self.log_buffer:
-                        f.write(line + "\n")
-            print("--- Работа завершена, логи сохранены ---")
+                    f.writelines(line + "\n" for line in self.log_buffer)
+            print("--- Готово ---")
 
 if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()
+    Simulation().run()

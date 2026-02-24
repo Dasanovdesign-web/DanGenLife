@@ -5,7 +5,7 @@ from organism import Organism
 class Plankton(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 10 
+        self.energy = 30 
 
     def drift(self, width, height):
         # Дрейф должен быть всегда, иначе планктон замирает
@@ -46,8 +46,8 @@ class Prey(Organism):
 class Predator(Organism): # Унаследовали от Organism, чтобы работали гены и зрение
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 60 # Большой стартовый запас
-        self.view_radius = 20.0 
+        self.energy = 20 # Большой стартовый запас
+        self.view_radius = 15.0 
 
     def move(self, width, height, prey_list):
         target = None
@@ -68,7 +68,7 @@ class Predator(Organism): # Унаследовали от Organism, чтобы �
             self.x = (self.x + random.uniform(-0.8, 0.8)) % width
             self.y = (self.y + random.uniform(-0.8, 0.8)) % height
         
-        self.energy -= 0.3 # Трата энергии за шаг
+        self.energy -= 0.7 # Трата энергии за шаг
 
     def reproduce(self):
         # Используем порог из конфига или фиксированный
