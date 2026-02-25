@@ -12,7 +12,7 @@ class Plankton(Organism):
         self.x = (self.x + random.uniform(-0.3, 0.3)) % width
         self.y = (self.y + random.uniform(-0.3, 0.3)) % height
 
-class Prey(Organism):
+class Herbivore(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
         self.energy = 35  # Повысили выживаемость [cite: 2026-02-05]
@@ -40,7 +40,7 @@ class Prey(Organism):
     def reproduce(self):
         if self.energy >= 50: # Снизили порог для активного роста популяции
             self.energy -= 25
-            return Prey(self.x, self.y, parent_genes=self.genes)
+            return Herbivore(self.x, self.y, parent_genes=self.genes)
         return None
 
 class Predator(Organism): # Унаследовали от Organism, чтобы работали гены и зрение
@@ -49,11 +49,11 @@ class Predator(Organism): # Унаследовали от Organism, чтобы �
         self.energy = 15 # Большой стартовый запас
         self.view_radius = 10.0 
 
-    def move(self, width, height, prey_list):
+    def move(self, width, height, herbivore_list):
         target = None
         min_dist = self.view_radius
 
-        for p in prey_list:
+        for p in herbivore_list:
             dist = ((self.x - p.x)**2 + (self.y - p.y)**2)**0.5
             if dist < min_dist:
                 min_dist = dist
