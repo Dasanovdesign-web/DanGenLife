@@ -91,7 +91,7 @@ class Simulation:
                 if abs(pred.x - prey.x) < 2.0 and abs(pred.y - prey.y) < 2.0:
                     if prey in self.prey_list:
                         self.prey_list.remove(prey)
-                        pred.energy += 40
+                        pred.energy += 20
             if pred.energy <= 0: self.predator_list.remove(pred)
 
         # Регенерация планктона
@@ -120,7 +120,7 @@ class Simulation:
                 self.log_statistics()
                 
                 # Обновление графики
-                pl_layer.set_offsets([[p.x, p.y] for p in self.plankton_list])
+                pl_layer.set_offsets([[p.x, p.y] for p in self.plankton_list] if self.plankton_list else np.empty((0, 2)))
                 pr_layer.set_offsets([[p.x, p.y] for p in self.prey_list] if self.prey_list else np.empty((0, 2)))
                 pd_layer.set_offsets([[p.x, p.y] for p in self.predator_list] if self.predator_list else np.empty((0, 2)))
                 

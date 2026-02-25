@@ -46,8 +46,8 @@ class Prey(Organism):
 class Predator(Organism): # Унаследовали от Organism, чтобы работали гены и зрение
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 20 # Большой стартовый запас
-        self.view_radius = 15.0 
+        self.energy = 15 # Большой стартовый запас
+        self.view_radius = 10.0 
 
     def move(self, width, height, prey_list):
         target = None
@@ -60,15 +60,16 @@ class Predator(Organism): # Унаследовали от Organism, чтобы �
                 target = p
 
         if target:
-            # Хищник чуть быстрее жертвы (1.2)
-            self.x = (self.x + (1.2 if target.x > self.x else -1.2)) % width
-            self.y = (self.y + (1.2 if target.y > self.y else -1.2)) % height
+            # Хищник чуть быстрее жертвы 
+            step = 0.9
+            self.x = (self.x + (step if target.x > self.x else step)) % width
+            self.y = (self.y + (step if target.y > self.y else step)) % height
         else:
             # Случайный поиск
             self.x = (self.x + random.uniform(-0.8, 0.8)) % width
             self.y = (self.y + random.uniform(-0.8, 0.8)) % height
         
-        self.energy -= 0.7 # Трата энергии за шаг
+        self.energy -= 1.0 # Трата энергии за шаг
 
     def reproduce(self):
         # Используем порог из конфига или фиксированный
