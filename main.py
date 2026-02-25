@@ -5,7 +5,7 @@ import random
 import psutil
 import time
 import os
-from entities import Plankton, Herbivore, Predator  
+from entities import Plankton, Herbivore, Predator, Apex_Predator
 
 # Глобальный таймер для замера общей производительности
 start_sim_time = time.time()
@@ -16,6 +16,9 @@ class Simulation:
         self.width = config.GRID_WIDTH
         self.height = config.GRID_HEIGHT
         self.grid = np.zeros((self.height, self.width))
+        self.herbivores = []
+        self.predators = []
+        
         self.log_buffer = []  
         self.iteration = 0
         
@@ -31,7 +34,8 @@ class Simulation:
                                random.random() * self.height) for _ in range(15)]
         self.predator_list = [Predator(random.random() * self.width, 
                                        random.random() * self.height) for _ in range(5)]
-        
+        self.apex_predator_list = [Predator(random.random() * self.width,
+                                       random.random() * self.height) for _ in range(2)]
         self.seed_plankton()
 
     def log_statistics(self):
@@ -77,8 +81,9 @@ class Simulation:
             p.move(self.width, self.height, self.plankton_list)
             for food in self.plankton_list[:]:
                 if abs(p.x - food.x) < 1.5 and abs(p.y - food.y) < 1.5:
-                    self.plankton_list.remove(food)
-                    p.energy += 30 
+                    if food in self.plankton_list:
+                        self.plankton_list.remove(food)
+                        p.energy += 30 
             
             child = p.reproduce()
             if child: self.herbivore_list.append(child)
@@ -91,8 +96,26 @@ class Simulation:
                 if abs(pred.x - herbivore.x) < 2.0 and abs(pred.y - herbivore.y) < 2.0:
                     if herbivore in self.herbivore_list:
                         self.herbivore_list.remove(herbivore)
-                        pred.energy += 20
-            if pred.energy <= 0: self.predator_list.remove(pred)   
+                        pred.energy += 25
+            
+            pred.energy -= 0.5 # Трата энергии за ход
+            if pred.energy <= 0: self.predator_list.remove(pred)  
+            
+        # 4. Суперхищники (Желтые) - Исправлено [cite: 2026-02-05]
+        for ax_p in self.apex_predator_list[:]:
+            # Апексы охотятся на КРАСНЫХ хищников
+            ax_p.move(self.width, self.height, self.predator_list) 
+    
+            for predator in self.predator_list[:]:
+                if abs(ax_p.x - predator.x) < 3.0 and abs(ax_p.y - predator.y) < 3.0:
+                    if predator in self.predator_list:
+                        self.predator_list.remove(predator)
+                        ax_p.energy += 50
+    
+            ax_p.energy -= 1 # Апексы тратят больше энергии, так как они большие
+            
+            if ax_p.energy <= 0: 
+                self.apex_predator_list.remove(ax_p)
 
         # Регенерация планктона
         if len(self.plankton_list) < 120 and random.random() < 0.3:
@@ -109,6 +132,42 @@ class Simulation:
         pl_layer = ax.scatter([], [], c="#FEFAFA", s=2, alpha=0.5)
         pr_layer = ax.scatter([], [], c="#00AD20", s=40, edgecolors='white')
         pd_layer = ax.scatter([], [], c="#C70104", s=100, edgecolors='white')
+        ax_layer = ax.scatter([], [], c="#FACE0C", s=120, edgecolors='white')
+
+        info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', fontsize=10)
+        ax.set_title("DanGenLife Ecosystem: Balance")
+
+        try:
+            while plt.fignum_exists(fig.number):
+                self.update_world()
+                self.log_statistics()
+                
+                # Обновление графики
+                pl_layer.set_offsets([[p.x, p.y] for p in self.plankton_list] if self.plankton_list else np.empty((0, 2)))
+                pr_layer.set_offsets([[p.x, p.y] for p in self.herbivore_list] if self.herbivore_list else np.empty((0, 2)))
+                pd_layer.set_offsets([[p.x, p.y] for p in self.predator_list] if self.predator_list else np.empty((0, 2)))
+                ax_layer.set_offsets([[p.x, p.y] for p in self.apex_predator_list] if self.apex_predator_list else np.empty((0, 2)))
+                
+                # Обновление HUD (Добавлены Apex)
+                info_text.set_text(f"Step: {self.iteration} | Herb: {len(self.herbivore_list)} | Pred: {len(self.predator_list)} | Apex: {len(self.apex_predator_list)}")
+
+                plt.pause(0.02) 
+        except KeyboardInterrupt:
+            print("\nОстановлено")
+        finally:
+            print("--- Готово ---")
+
+    def run(self):
+        plt.ion()
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.set_facecolor("#1F1F1F") 
+        ax.set_xlim(0, self.width)
+        ax.set_ylim(0, self.height)
+        
+        pl_layer = ax.scatter([], [], c="#FEFAFA", s=2, alpha=0.5)
+        pr_layer = ax.scatter([], [], c="#00AD20", s=40, edgecolors='white')
+        pd_layer = ax.scatter([], [], c="#C70104", s=100, edgecolors='white')
+        ax_layer = ax.scatter([], [], c="#FACE0C", s=120, edgecolors='white')
 
         # HUD (текст на экране) [cite: 2026-01-26]
         info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', fontsize=10)
@@ -123,6 +182,7 @@ class Simulation:
                 pl_layer.set_offsets([[p.x, p.y] for p in self.plankton_list] if self.plankton_list else np.empty((0, 2)))
                 pr_layer.set_offsets([[p.x, p.y] for p in self.herbivore_list] if self.herbivore_list else np.empty((0, 2)))
                 pd_layer.set_offsets([[p.x, p.y] for p in self.predator_list] if self.predator_list else np.empty((0, 2)))
+                ax_layer.set_offsets([[p.x, p.y] for p in self.apex_predator_list] if self.apex_predator_list else np.empty((0, 2)))
                 
                 # Обновление HUD
                 info_text.set_text(f"Step: {self.iteration} | herbivore: {len(self.herbivore_list)} | Pred: {len(self.predator_list)}")
