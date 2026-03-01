@@ -35,7 +35,7 @@ class Herbivore(Organism):
         else:
             super().move(width, height)
         
-        self.energy -= 0.15 # Уменьшили расход на движение 
+        self.energy -= 0.25 # Урасход на движение 
 
     def reproduce(self):
         if self.energy >= 50: # Снизили порог для активного роста популяции
@@ -72,7 +72,7 @@ class Predator(Organism):
 class Apex_Predator(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 80 # Увеличил в 8 раз, чтобы они жили долго
+        self.energy = 50 # Увеличил в 8 раз, чтобы они жили долго
         self.view_radius = 25.0 
             
     def move(self, width, height, food_list=None):
@@ -87,10 +87,10 @@ class Apex_Predator(Organism):
                     target = food
 
         if target:
-            step = 1.2 # Быстрее обычных
+            step = 1.1 # Быстрее обычных
             self.x = (self.x + (step if target.x > self.x else -step)) % width
             self.y = (self.y + (step if target.y > self.y else -step)) % height
         else:
             super().move(width, height)
         
-        self.energy -= 0.2 # Высшие хищники очень экономны
+        self.energy -= 0.5 # Высшие хищники очень экономны
