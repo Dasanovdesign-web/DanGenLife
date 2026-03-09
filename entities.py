@@ -19,7 +19,7 @@ class Herbivore(Organism):
 
     def move(self, width, height, food_list=None):
         target = None
-        closest_dist = self.genes.get("vision", 10) # Гены из родительского класса
+        closest_dist = self.genes.get("vision", 7) # Гены из родительского класса
 
         if food_list:
             for food in food_list:
@@ -35,10 +35,10 @@ class Herbivore(Organism):
         else:
             super().move(width, height)
         
-        self.energy -= 0.25 # Урасход на движение 
+        self.energy -= 0.30 # Урасход на движение 
 
     def reproduce(self):
-        if self.energy >= 50: # Снизили порог для активного роста популяции
+        if self.energy >= 70: # Снизили порог для активного роста популяции
             self.energy -= 25
             return Herbivore(self.x, self.y, parent_genes=self.genes)
         return None
@@ -47,7 +47,7 @@ class Predator(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
         self.energy = 40 # Увеличил, чтобы не умирали сразу
-        self.view_radius = 15.0 
+        self.view_radius = 20.0 
 
     def move(self, width, height, herbivore_list):
         target = None
@@ -72,12 +72,17 @@ class Predator(Organism):
 class Apex_Predator(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 50 # Увеличил в 8 раз, чтобы они жили долго
-        self.view_radius = 25.0 
-            
+        self.energy = 50.0 
+        self.view_radius = 20.0 # Немного сузил, чтобы он не был всевидящим
+        self.type = "APEX"
+
     def move(self, width, height, food_list=None):
         target = None
         closest_dist = self.view_radius
+        
+        # Базовый расход на поддержание огромного тела (всегда)
+        # Если 50/1.5 = он проживет максимум 33 шага без еды
+        self.energy -= 1.5 
 
         if food_list:
             for food in food_list:
@@ -87,10 +92,11 @@ class Apex_Predator(Organism):
                     target = food
 
         if target:
-            step = 1.1 # Быстрее обычных
+            step = 1.1 
+            # Дополнительный расход на активную охоту
+            self.energy -= 2.0  
             self.x = (self.x + (step if target.x > self.x else -step)) % width
             self.y = (self.y + (step if target.y > self.y else -step)) % height
         else:
+            # Обычное движение без цели тоже не бесплатно
             super().move(width, height)
-        
-        self.energy -= 0.5 # Высшие хищники очень экономны
