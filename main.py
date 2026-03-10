@@ -11,32 +11,7 @@ from logger import SimulationLogger
 # Глобальный таймер для замера общей производительности
 start_sim_time = time.time()
 
-class Simulation:
-    def __init__(self):
-        # 1. Параметры мира 
-        self.data_logger = SimulationLogger()
-        self.width = config.GRID_WIDTH
-        self.height = config.GRID_HEIGHT
-        self.grid = np.zeros((self.height, self.width))
-        
-        self.log_buffer = []  
-        self.iteration = 0
-        
-        # 2. Очистка логов 
-        if os.path.exists("simulation_log.txt"):
-            with open("simulation_log.txt", "w") as f:
-                f.write("--- New simulation start ---\n")
-
-        # 3. Создание популяций [cite: 2026-01-30]
-        self.plankton_list = [Plankton(random.random() * self.width,
-                                       random.random() * self.height) for _ in range(150)]
-        self.herbivore_list = [Herbivore(random.random() * self.width, 
-                                         random.random() * self.height) for _ in range(15)]
-        self.predator_list = [Predator(random.random() * self.width, 
-                                       random.random() * self.height) for _ in range(5)]
-        # Важно: используем класс Apex_Predator для Суперхищников [cite: 2026-01-30]
-        self.apex_predator_list = [Apex_Predator(random.random() * self.width,
-                                                 random.random() * self.height) for _ in range(2)]
+аа
 
     def log_statistics(self):
         # Замер ресурсов раз в 100 шагов [cite: 2026-02-24]

@@ -1,8 +1,8 @@
 # DanGenLife Ecosystem - Configuration
 
 # Параметры мира (Сетка)
-GRID_WIDTH = 50
-GRID_HEIGHT = 50
+GRID_WIDTH = 100
+GRID_HEIGHT = 100
 INITIAL_PLANKTON_DENSITY = 0.4  # Чуть больше еды на старте
 
 # Энергетический баланс
