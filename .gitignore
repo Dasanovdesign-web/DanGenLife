@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
+.venv/
+*.xlsx
+*.txt
+*.csv
