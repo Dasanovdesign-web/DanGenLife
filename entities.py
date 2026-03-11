@@ -72,8 +72,8 @@ class Predator(Organism):
 class Apex_Predator(Organism):
     def __init__(self, x, y, parent_genes=None):
         super().__init__(x, y, parent_genes)
-        self.energy = 50.0 
-        self.view_radius = 20.0 # Немного сузил, чтобы он не был всевидящим
+        self.energy = 55.0 
+        self.view_radius = 25.0 # Немного сузил, чтобы он не был всевидящим
         self.type = "APEX"
 
     def move(self, width, height, food_list=None):
@@ -82,7 +82,7 @@ class Apex_Predator(Organism):
         
         # Базовый расход на поддержание огромного тела (всегда)
         # Если 50/1.5 = он проживет максимум 33 шага без еды
-        self.energy -= 1.5 
+        self.energy -= 1 
 
         if food_list:
             for food in food_list:

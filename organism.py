@@ -21,7 +21,7 @@ class Organism:
         mutation_strength = 0.1
         for name, value in p_genes.items():
             factor = 1 + random.uniform(-mutation_strength, mutation_strength)
-            new_genes[name] = max(0.01, value * factor)
+            new_genes[name] = max(0.05, value * factor)
         return new_genes
 
     def move(self, width, height):
